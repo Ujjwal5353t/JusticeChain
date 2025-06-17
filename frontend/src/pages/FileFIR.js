@@ -1,0 +1,616 @@
+import React, { useState } from 'react';
+import { FIRStorage } from '../utils/firStorage';
+
+const FileFIR = () => {
+  const [formData, setFormData] = useState({
+    // Personal Information
+    fullName: '',
+    fatherName: '',
+    age: '',
+    gender: '',
+    occupation: '',
+    address: '',
+    city: '',
+    state: '',
+    pincode: '',
+    phone: '',
+    email: '',
+    idType: '',
+    idNumber: '',
+    
+    // Incident Details
+    incidentType: '',
+    incidentDate: '',
+    incidentTime: '',
+    incidentLocation: '',
+    incidentDescription: '',
+    suspectDetails: '',
+    witnessDetails: '',
+    evidenceDescription: '',
+    
+    // Additional Information
+    previousComplaint: false,
+    previousComplaintDetails: '',
+    urgencyLevel: 'medium',
+    preferredLanguage: 'english'
+  });
+
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const incidentTypes = [
+    'Theft/Burglary',
+    'Fraud/Cybercrime',
+    'Assault/Violence',
+    'Property Dispute',
+    'Missing Person',
+    'Domestic Violence',
+    'Road Accident',
+    'Harassment',
+    'Kidnapping',
+    'Murder',
+    'Other'
+  ];
+
+  const states = [
+    'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+    'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
+    'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram',
+    'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
+    'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal'
+  ];
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleNext = () => {
+    if (currentStep < 4) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const handlePrev = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    // Save FIR to localStorage
+    const result = FIRStorage.saveFIR(formData);
+    
+    setTimeout(() => {
+      if (result.success) {
+        alert(`FIR submitted successfully! Your FIR Number is: ${result.firNumber}`);
+        // Reset form
+        setFormData({
+          fullName: '',
+          fatherName: '',
+          age: '',
+          gender: '',
+          occupation: '',
+          address: '',
+          city: '',
+          state: '',
+          pincode: '',
+          phone: '',
+          email: '',
+          idType: '',
+          idNumber: '',
+          incidentType: '',
+          incidentDate: '',
+          incidentTime: '',
+          incidentLocation: '',
+          incidentDescription: '',
+          suspectDetails: '',
+          witnessDetails: '',
+          evidenceDescription: '',
+          previousComplaint: false,
+          previousComplaintDetails: '',
+          urgencyLevel: 'medium',
+          preferredLanguage: 'english'
+        });
+        setCurrentStep(1);
+      } else {
+        alert('Error submitting FIR. Please try again.');
+      }
+      setIsSubmitting(false);
+    }, 2000);
+  };
+
+  const StepIndicator = () => (
+    <div className="flex items-center justify-center mb-8">
+      {[1, 2, 3, 4].map((step) => (
+        <div key={step} className="flex items-center">
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
+            currentStep >= step 
+              ? 'bg-blue-600 text-white' 
+              : 'bg-gray-300 text-gray-600'
+          }`}>
+            {step}
+          </div>
+          {step < 4 && (
+            <div className={`w-12 h-1 mx-2 ${
+              currentStep > step ? 'bg-blue-600' : 'bg-gray-300'
+            }`}></div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+
+  const PersonalInfoStep = () => (
+    <div className="space-y-6">
+      <h3 className="text-2xl font-bold text-gray-900 mb-6">Personal Information</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+          <input
+            type="text"
+            name="fullName"
+            value={formData.fullName}
+            onChange={handleInputChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter your full name"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Father's Name *</label>
+          <input
+            type="text"
+            name="fatherName"
+            value={formData.fatherName}
+            onChange={handleInputChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter father's name"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Age *</label>
+          <input
+            type="number"
+            name="age"
+            value={formData.age}
+            onChange={handleInputChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter your age"
+            min="1"
+            max="120"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Gender *</label>
+          <select
+            name="gender"
+            value={formData.gender}
+            onChange={handleInputChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            required
+          >
+            <option value="">Select Gender</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Occupation</label>
+          <input
+            type="text"
+            name="occupation"
+            value={formData.occupation}
+            onChange={handleInputChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter your occupation"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
+          <input
+            type="tel"
+            name="phone"
+            value={formData.phone}
+            onChange={handleInputChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter phone number"
+            required
+          />
+        </div>
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+          <input
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleInputChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter email address"
+          />
+        </div>
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Address *</label>
+          <textarea
+            name="address"
+            value={formData.address}
+            onChange={handleInputChange}
+            rows="3"
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter complete address"
+            required
+          ></textarea>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">City *</label>
+          <input
+            type="text"
+            name="city"
+            value={formData.city}
+            onChange={handleInputChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter city"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">State *</label>
+          <select
+            name="state"
+            value={formData.state}
+            onChange={handleInputChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            required
+          >
+            <option value="">Select State</option>
+            {states.map(state => (
+              <option key={state} value={state}>{state}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Pincode *</label>
+          <input
+            type="text"
+            name="pincode"
+            value={formData.pincode}
+            onChange={handleInputChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter pincode"
+            pattern="[0-9]{6}"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">ID Type *</label>
+          <select
+            name="idType"
+            value={formData.idType}
+            onChange={handleInputChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            required
+          >
+            <option value="">Select ID Type</option>
+            <option value="aadhaar">Aadhaar Card</option>
+            <option value="pan">PAN Card</option>
+            <option value="voter">Voter ID</option>
+            <option value="driving">Driving License</option>
+            <option value="passport">Passport</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">ID Number *</label>
+          <input
+            type="text"
+            name="idNumber"
+            value={formData.idNumber}
+            onChange={handleInputChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter ID number"
+            required
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  const IncidentDetailsStep = () => (
+    <div className="space-y-6">
+      <h3 className="text-2xl font-bold text-gray-900 mb-6">Incident Details</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Type of Incident *</label>
+          <select
+            name="incidentType"
+            value={formData.incidentType}
+            onChange={handleInputChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            required
+          >
+            <option value="">Select Incident Type</option>
+            {incidentTypes.map(type => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Date of Incident *</label>
+          <input
+            type="date"
+            name="incidentDate"
+            value={formData.incidentDate}
+            onChange={handleInputChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            max={new Date().toISOString().split('T')[0]}
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Time of Incident</label>
+          <input
+            type="time"
+            name="incidentTime"
+            value={formData.incidentTime}
+            onChange={handleInputChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Urgency Level</label>
+          <select
+            name="urgencyLevel"
+            value={formData.urgencyLevel}
+            onChange={handleInputChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="critical">Critical</option>
+          </select>
+        </div>
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Location of Incident *</label>
+          <textarea
+            name="incidentLocation"
+            value={formData.incidentLocation}
+            onChange={handleInputChange}
+            rows="3"
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Provide detailed location where the incident occurred"
+            required
+          ></textarea>
+        </div>
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Incident Description *</label>
+          <textarea
+            name="incidentDescription"
+            value={formData.incidentDescription}
+            onChange={handleInputChange}
+            rows="5"
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Provide a detailed description of what happened. Include all relevant facts and circumstances."
+            required
+          ></textarea>
+        </div>
+      </div>
+    </div>
+  );
+
+  const AdditionalDetailsStep = () => (
+    <div className="space-y-6">
+      <h3 className="text-2xl font-bold text-gray-900 mb-6">Additional Details</h3>
+      <div className="space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Suspect Details (if known)</label>
+          <textarea
+            name="suspectDetails"
+            value={formData.suspectDetails}
+            onChange={handleInputChange}
+            rows="4"
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Provide any information about the suspect(s) - name, description, address, etc."
+          ></textarea>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Witness Details (if any)</label>
+          <textarea
+            name="witnessDetails"
+            value={formData.witnessDetails}
+            onChange={handleInputChange}
+            rows="4"
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Provide witness information - names, contact details, what they witnessed"
+          ></textarea>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Evidence Description</label>
+          <textarea
+            name="evidenceDescription"
+            value={formData.evidenceDescription}
+            onChange={handleInputChange}
+            rows="4"
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Describe any evidence available - photos, videos, documents, physical evidence, etc."
+          ></textarea>
+        </div>
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            name="previousComplaint"
+            checked={formData.previousComplaint}
+            onChange={handleInputChange}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          />
+          <label className="ml-2 block text-sm text-gray-700">
+            Have you filed a complaint regarding this matter before?
+          </label>
+        </div>
+        {formData.previousComplaint && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Previous Complaint Details</label>
+            <textarea
+              name="previousComplaintDetails"
+              value={formData.previousComplaintDetails}
+              onChange={handleInputChange}
+              rows="3"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Provide details about the previous complaint - when, where, complaint number, etc."
+            ></textarea>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const ReviewStep = () => (
+    <div className="space-y-6">
+      <h3 className="text-2xl font-bold text-gray-900 mb-6">Review Your FIR</h3>
+      <div className="bg-gray-50 rounded-lg p-6 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <h4 className="font-semibold text-gray-900">Personal Information</h4>
+            <p className="text-sm text-gray-600">Name: {formData.fullName}</p>
+            <p className="text-sm text-gray-600">Age: {formData.age}</p>
+            <p className="text-sm text-gray-600">Phone: {formData.phone}</p>
+            <p className="text-sm text-gray-600">City: {formData.city}, {formData.state}</p>
+          </div>
+          <div>
+            <h4 className="font-semibold text-gray-900">Incident Information</h4>
+            <p className="text-sm text-gray-600">Type: {formData.incidentType}</p>
+            <p className="text-sm text-gray-600">Date: {formData.incidentDate}</p>
+            <p className="text-sm text-gray-600">Urgency: {formData.urgencyLevel}</p>
+          </div>
+        </div>
+        <div>
+          <h4 className="font-semibold text-gray-900">Incident Description</h4>
+          <p className="text-sm text-gray-600">{formData.incidentDescription}</p>
+        </div>
+      </div>
+      
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-start">
+          <svg className="h-5 w-5 text-blue-600 mt-0.5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+          </svg>
+          <div>
+            <h4 className="text-sm font-medium text-blue-900">Important Notice</h4>
+            <p className="text-sm text-blue-700 mt-1">
+              By submitting this FIR, you confirm that all information provided is true and accurate to the best of your knowledge. 
+              False information in an FIR is a punishable offense under Indian law.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-12">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">File FIR Online</h1>
+          <p className="text-xl text-gray-600">Secure, Fast, and Transparent</p>
+        </div>
+
+        <StepIndicator />
+
+        <div className="bg-white rounded-2xl shadow-lg p-8">
+          <form onSubmit={handleSubmit}>
+            {currentStep === 1 && <PersonalInfoStep />}
+            {currentStep === 2 && <IncidentDetailsStep />}
+            {currentStep === 3 && <AdditionalDetailsStep />}
+            {currentStep === 4 && <ReviewStep />}
+
+            {/* Navigation Buttons */}
+            <div className="flex justify-between items-center mt-8 pt-8 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={handlePrev}
+                disabled={currentStep === 1}
+                className={`flex items-center px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+                  currentStep === 1
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Previous
+              </button>
+
+              {currentStep < 4 ? (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all duration-200"
+                >
+                  Next
+                  <svg className="h-5 w-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className={`flex items-center px-8 py-3 rounded-lg font-medium transition-all duration-200 ${
+                    isSubmitting
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-green-600 hover:bg-green-700'
+                  } text-white`}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25"></circle>
+                        <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" className="opacity-75"></path>
+                      </svg>
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      Submit FIR
+                      <svg className="h-5 w-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
+
+        {/* Help Section */}
+        <div className="mt-12 bg-blue-50 rounded-xl p-6">
+          <div className="flex items-start">
+            <svg className="h-6 w-6 text-blue-600 mt-1 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <h3 className="text-lg font-semibold text-blue-900">Need Help?</h3>
+              <p className="text-blue-700 mt-1">
+                If you need assistance filling out this form, please call our helpline at <strong>1800-XXX-XXXX</strong> or 
+                visit your nearest police station. Our support team is available 24/7 to help you.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default FileFIR;
