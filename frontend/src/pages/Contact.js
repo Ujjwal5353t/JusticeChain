@@ -25,6 +25,19 @@ const Contact = () => {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
+    
+    // For phone number, only allow digits
+    if (name === 'phone') {
+      const numericValue = value.replace(/\D/g, ''); // Remove all non-digit characters
+      if (numericValue.length <= 10) { // Limit to 10 digits
+        setFormData(prev => ({
+          ...prev,
+          [name]: numericValue
+        }));
+      }
+      return;
+    }
+    
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
@@ -231,7 +244,9 @@ const Contact = () => {
                       value={formData.phone}
                       onChange={handleInputChange}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Enter your phone number"
+                      placeholder="Enter 10-digit phone number"
+                      maxLength="10"
+                      pattern="[0-9]{10}"
                     />
                   </div>
                   <div>

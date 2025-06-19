@@ -1,15 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { AuthService } from '../utils/auth';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [citizenUser, setCitizenUser] = useState(null);
+  const [adminUser, setAdminUser] = useState(null);
   const location = useLocation();
+
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = () => {
+      const citizen = AuthService.isAuthenticated('citizen');
+      const admin = AuthService.isAuthenticated('admin');
+      setCitizenUser(citizen);
+      setAdminUser(admin);
+    };
+
+    checkAuth();
+    // Check auth status on route changes
+    const interval = setInterval(checkAuth, 1000);
+    return () => clearInterval(interval);
+  }, [location]);
+
+  const handleLogout = (userType) => {
+    AuthService.logout(userType);
+    setCitizenUser(null);
+    setAdminUser(null);
+    window.location.href = '/';
+  };
 
   const navItems = [
     { name: 'Home', path: '/', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
     { name: 'File FIR', path: '/file-fir', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
     { name: 'Track Status', path: '/status', icon: 'M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
     { name: 'Resources', path: '/resources', icon: 'M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z' },
+    { name: 'Current Cases', path: '/current-cases', icon: 'M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2' },
     { name: 'Contact', path: '/contact', icon: 'M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' }
   ];
 
@@ -43,6 +69,7 @@ const Navbar = () => {
                 <p className="text-xs text-blue-800">Ministry of Home Affairs, Government of India</p>
               </div>
             </div>
+            
             <div className="hidden md:flex items-center space-x-6">
               <div className="text-right">
                 <p className="text-sm font-semibold text-blue-900">Emergency Helpline</p>
@@ -52,6 +79,63 @@ const Navbar = () => {
                 <p className="text-sm font-semibold text-blue-900">Women Helpline</p>
                 <p className="text-lg font-bold text-red-600">1091</p>
               </div>
+            </div>
+            <div className="hidden md:flex items-center space-x-4">
+              {/* Authentication Status */}
+              {citizenUser ? (
+                <div className="flex items-center space-x-3">
+                  <div className="text-right">
+                    <p className="text-sm text-blue-900 font-medium">Logged in as</p>
+                    <p className="text-sm text-gray-600">{citizenUser.email}</p>
+                  </div>
+                  <Link
+                    to="/citizen-dashboard"
+                    className="flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-600 transition-colors shadow-md"
+                  >
+                    🏛️ Dashboard
+                  </Link>
+                  <button
+                    onClick={() => handleLogout('citizen')}
+                    className="flex items-center px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors shadow-md"
+                  >
+                    Logout
+                  </button>
+                </div>
+              ) : adminUser ? (
+                <div className="flex items-center space-x-3">
+                  <div className="text-right">
+                    <p className="text-sm text-blue-900 font-medium">Admin Officer</p>
+                    <p className="text-sm text-gray-600">{adminUser.email}</p>
+                  </div>
+                  <Link
+                    to="/admin-dashboard"
+                    className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-700 rounded-lg hover:bg-green-600 transition-colors shadow-md"
+                  >
+                    👨‍💼 Admin Dashboard
+                  </Link>
+                  <button
+                    onClick={() => handleLogout('admin')}
+                    className="flex items-center px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors shadow-md"
+                  >
+                    Logout
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-3">
+                  <Link
+                    to="/citizen-login"
+                    className="flex items-center px-5 py-2 text-sm font-semibold text-white bg-blue-700 rounded-lg hover:bg-blue-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  >
+                    🏛️ Citizen Login
+                  </Link>
+                  <Link
+                    to="/admin-login"
+                    className="flex items-center px-5 py-2 text-sm font-semibold text-white bg-green-700 rounded-lg hover:bg-green-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  >
+                    👨‍💼 Admin Login
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -116,6 +200,65 @@ const Navbar = () => {
                   {item.name}
                 </Link>
               ))}
+              {/* Mobile Authentication Links */}
+              <div className="border-t border-blue-700 pt-2 mt-2">
+                {citizenUser ? (
+                  <>
+                    <Link
+                      to="/citizen-dashboard"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center px-3 py-2 rounded-md text-base font-medium text-white hover:text-orange-200 hover:bg-blue-700"
+                    >
+                      🏛️ Dashboard
+                    </Link>
+                    <button
+                      onClick={() => {
+                        handleLogout('citizen');
+                        setIsMenuOpen(false);
+                      }}
+                      className="flex items-center px-3 py-2 rounded-md text-base font-medium text-white hover:text-orange-200 hover:bg-blue-700 w-full text-left"
+                    >
+                      Logout
+                    </button>
+                  </>
+                ) : adminUser ? (
+                  <>
+                    <Link
+                      to="/admin-dashboard"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center px-3 py-2 rounded-md text-base font-medium text-white hover:text-orange-200 hover:bg-blue-700"
+                    >
+                      👨‍💼 Admin Dashboard
+                    </Link>
+                    <button
+                      onClick={() => {
+                        handleLogout('admin');
+                        setIsMenuOpen(false);
+                      }}
+                      className="flex items-center px-3 py-2 rounded-md text-base font-medium text-white hover:text-orange-200 hover:bg-blue-700 w-full text-left"
+                    >
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      to="/citizen-login"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center px-3 py-2 rounded-md text-base font-medium text-white hover:text-orange-200 hover:bg-blue-700"
+                    >
+                      🏛️ Citizen Login
+                    </Link>
+                    <Link
+                      to="/admin-login"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center px-3 py-2 rounded-md text-base font-medium text-white hover:text-orange-200 hover:bg-blue-700"
+                    >
+                      👨‍💼 Admin Login
+                    </Link>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         )}

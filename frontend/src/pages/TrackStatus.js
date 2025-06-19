@@ -6,25 +6,43 @@ const TrackStatus = () => {
   const [searchValue, setSearchValue] = useState('');
   const [searchResult, setSearchResult] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
   // Initialize sample data on component mount
   useEffect(() => {
-    FIRStorage.initializeSampleData();
+    try {
+      FIRStorage.initializeSampleData();
+    } catch (error) {
+      console.error('Error initializing sample data:', error);
+    }
   }, []);
 
   const handleSearch = async (e) => {
     e.preventDefault();
+    if (!searchValue.trim()) return;
+    
     setIsSearching(true);
+    setHasSearched(false);
     
     // Search in localStorage
     setTimeout(() => {
-      const result = FIRStorage.searchFIR(searchType, searchValue);
-      setSearchResult(result);
-      setIsSearching(false);
+      try {
+        const result = FIRStorage.searchFIR(searchType, searchValue.trim());
+        setSearchResult(result);
+        setHasSearched(true);
+        setIsSearching(false);
+      } catch (error) {
+        console.error('Search error:', error);
+        setSearchResult(null);
+        setHasSearched(true);
+        setIsSearching(false);
+      }
     }, 1500);
   };
 
   const getStatusColor = (status) => {
+    if (!status) return 'bg-gray-100 text-gray-800';
+    
     switch (status.toLowerCase()) {
       case 'fir registered':
         return 'bg-blue-100 text-blue-800';
@@ -94,9 +112,9 @@ const TrackStatus = () => {
             <div className="flex justify-center">
               <button
                 type="submit"
-                disabled={isSearching}
+                disabled={isSearching || !searchValue.trim()}
                 className={`flex items-center px-8 py-3 rounded-lg font-medium transition-all duration-200 ${
-                  isSearching
+                  isSearching || !searchValue.trim()
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-blue-600 hover:bg-blue-700'
                 } text-white`}
@@ -122,42 +140,44 @@ const TrackStatus = () => {
           </form>
         </div>
 
-        {/* Search Results */}
-        {searchResult && (
+        {/* Search Results - Found Case */}
+        {hasSearched && searchResult && (
           <div className="space-y-8">
             {/* Case Summary */}
             <div className="bg-white rounded-2xl shadow-lg p-8">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">Case Summary</h2>
                 <span className={`px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(searchResult.status)}`}>
-                  {searchResult.status}
+                  {searchResult.status || 'Status Unknown'}
                 </span>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-1">FIR Number</h3>
-                  <p className="text-lg font-semibold text-gray-900">{searchResult.firNumber}</p>
+                  <p className="text-lg font-semibold text-gray-900">{searchResult.firNumber || 'N/A'}</p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-1">Filed Date</h3>
-                  <p className="text-lg font-semibold text-gray-900">{searchResult.filedDate}</p>
+                  <p className="text-lg font-semibold text-gray-900">{searchResult.filedDate || 'N/A'}</p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-1">Incident Type</h3>
-                  <p className="text-lg font-semibold text-gray-900">{searchResult.incidentType}</p>
+                  <p className="text-lg font-semibold text-gray-900">{searchResult.incidentType || 'N/A'}</p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-1">Complainant</h3>
-                  <p className="text-lg font-semibold text-gray-900">{searchResult.fullName}</p>
+                  <p className="text-lg font-semibold text-gray-900">{searchResult.fullName || 'N/A'}</p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-1">Police Station</h3>
-                  <p className="text-lg font-semibold text-gray-900">{searchResult.city} Police Station</p>
+                  <p className="text-lg font-semibold text-gray-900">{searchResult.city ? `${searchResult.city} Police Station` : 'N/A'}</p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-1">Investigating Officer</h3>
-                  <p className="text-lg font-semibold text-gray-900">Inspector {searchResult.fullName.split(' ')[0]} Sharma</p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {searchResult.fullName ? `Inspector ${searchResult.fullName.split(' ')[0]} Sharma` : 'Not Assigned'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -166,25 +186,29 @@ const TrackStatus = () => {
             <div className="bg-white rounded-2xl shadow-lg p-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Case Timeline</h2>
               <div className="space-y-6">
-                {searchResult.timeline.map((event, index) => (
-                  <div key={index} className="flex items-start space-x-4">
-                    <div className="flex-shrink-0">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
+                {searchResult.timeline && Array.isArray(searchResult.timeline) ? 
+                  searchResult.timeline.map((event, index) => (
+                    <div key={index} className="flex items-start space-x-4">
+                      <div className="flex-shrink-0">
+                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                          <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-semibold text-gray-900">{event.status || 'Update'}</h3>
+                          <span className="text-sm text-gray-500">{event.date || 'Date Unknown'}</span>
+                        </div>
+                        <p className="text-gray-600 mt-1">{event.description || 'No description available'}</p>
+                        <p className="text-sm text-gray-500 mt-2">Officer: {event.officer || 'Unknown'}</p>
                       </div>
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold text-gray-900">{event.status}</h3>
-                        <span className="text-sm text-gray-500">{event.date}</span>
-                      </div>
-                      <p className="text-gray-600 mt-1">{event.description}</p>
-                      <p className="text-sm text-gray-500 mt-2">Officer: {event.officer}</p>
-                    </div>
-                  </div>
-                ))}
+                  )) : (
+                    <p className="text-gray-500">No timeline information available.</p>
+                  )
+                }
               </div>
             </div>
 
@@ -224,8 +248,8 @@ const TrackStatus = () => {
           </div>
         )}
 
-        {/* No Results */}
-        {searchResult === null && searchValue && !isSearching && (
+        {/* No Results Found */}
+        {hasSearched && !searchResult && (
           <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
             <svg className="h-16 w-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />

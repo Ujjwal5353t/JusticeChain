@@ -8,6 +8,11 @@ import FileFIR from "./pages/FileFIR";
 import TrackStatus from "./pages/TrackStatus";
 import Resources from "./pages/Resources";
 import Contact from "./pages/Contact";
+import CurrentCases from "./pages/CurrentCases";
+import CitizenLogin from "./pages/CitizenLogin";
+import AdminLogin from "./pages/AdminLogin";
+import CitizenDashboard from "./pages/CitizenDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
 
 function App() {
   return (
@@ -21,7 +26,12 @@ function App() {
               <Route path="/file-fir" element={<FileFIR />} />
               <Route path="/status" element={<TrackStatus />} />
               <Route path="/resources" element={<Resources />} />
+              <Route path="/current-cases" element={<CurrentCases />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/citizen-login" element={<CitizenLogin />} />
+              <Route path="/admin-login" element={<AdminLogin />} />
+              <Route path="/citizen-dashboard" element={<CitizenDashboard />} />
+              <Route path="/admin-dashboard" element={<AdminDashboard />} />
             </Routes>
           </main>
           <Footer />
