@@ -223,27 +223,110 @@ const FileFIR = () => {
   const handleSubmit = async () => {
     const allErrors = [];
     for (let step = 1; step <= 3; step++) {
-      const stepErrors = validateStep(step);
-      allErrors.push(...stepErrors);
+        const stepErrors = validateStep(step);
+        allErrors.push(...stepErrors);
     }
-    
+
     if (allErrors.length > 0) {
-      alert('Please fix the following errors before submitting:\n\n' + allErrors.join('\n'));
-      return;
+        alert('Please fix the following errors before submitting:\n\n' + allErrors.join('\n'));
+        return;
     }
-    
+
     setIsSubmitting(true);
-    
-    // Add user information to FIR data
-    const firDataWithUser = {
-      ...formData,
-      filedByUser: {
-        email: user.email,
-        fullName: user.fullName || user.email,
-        userType: user.userType,
-        loginTime: user.loginTime
-      }
-    };
+
+    try {
+        // STEP 1: Upload full FIR to IPFS
+        const fullFIRData = {
+            ...formData,
+            filedByUser: {
+                email: user.email,
+                fullName: user.fullName || user.email,
+                userType: user.userType,
+                loginTime: user.loginTime
+            }
+        };
+
+        // Upload to IPFS via backend
+        const ipfsResponse = await fetch("http://localhost:3000/uploadToIPFS", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(fullFIRData)
+        });
+
+        const ipfsData = await ipfsResponse.json();
+
+        if (!ipfsData.ipfsHash) {
+            throw new Error("Failed to upload FIR to IPFS.");
+        }
+
+        const ipfsHash = ipfsData.ipfsHash;
+        console.log("✅ IPFS Hash:", ipfsHash);
+
+        // STEP 2: Submit FIR hash to blockchain
+        const payload = {
+            title: formData.incidentType || "FIR Report",
+            description: formData.incidentDescription,
+            severity: 3,  // you can take this from form later
+            ipfsHash
+        };
+
+        const blockchainResponse = await fetch("http://localhost:3000/createFIR", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const blockchainData = await blockchainResponse.json();
+
+        if (blockchainResponse.ok) {
+            alert(`✅ FIR submitted! Blockchain Tx Hash: ${blockchainData.txHash}`);
+            console.log("Blockchain Tx:", blockchainData.txHash);
+
+            // Reset form after success
+            setFormData({
+                fullName: '',
+                fatherName: '',
+                age: '',
+                gender: '',
+                occupation: '',
+                address: '',
+                city: '',
+                state: '',
+                pincode: '',
+                phone: '',
+                email: user?.email || '',
+                idType: '',
+                idNumber: '',
+                incidentType: '',
+                incidentDate: '',
+                incidentTime: '',
+                incidentLocation: '',
+                incidentDescription: '',
+                suspectDetails: '',
+                witnessDetails: '',
+                evidenceDescription: '',
+                previousComplaint: false,
+                previousComplaintDetails: '',
+                preferredLanguage: 'english',
+                mediaFiles: []
+            });
+
+            setCurrentStep(1);
+        } else {
+            throw new Error(blockchainData.error || "Failed to submit FIR on blockchain.");
+        }
+    } catch (err) {
+        console.error("Error submitting FIR:", err);
+        alert(`❌ Error: ${err.message}`);
+    } finally {
+        setIsSubmitting(false);
+    }
+};
+
     
     const result = FIRStorage.saveFIR(firDataWithUser);
     
