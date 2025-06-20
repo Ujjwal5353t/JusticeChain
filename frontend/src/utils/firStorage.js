@@ -1,4 +1,6 @@
 // LocalStorage utility for managing FIR data
+
+import { sendFirToSmartContract } from "./etherclient";
 export class FIRStorage {
   static STORAGE_KEY = 'justice_chain_firs';
   
@@ -16,7 +18,7 @@ export class FIRStorage {
   }
 
   // Save FIR to localStorage
-  static saveFIR(firData) {
+  static async saveFIR(firData) {
     try {
       const existingFIRs = this.getAllFIRs();
       const firNumber = this.generateFIRNumber();
@@ -39,6 +41,15 @@ export class FIRStorage {
 
       const updatedFIRs = [...existingFIRs, newFIR];
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(updatedFIRs));
+
+      try {
+      const result = await sendFirToSmartContract(firNumber);
+      if (!result.success) {
+        console.warn("Saved locally but failed on blockchain:", result.error);
+      }
+    } catch (err) {
+      console.error("Blockchain error:", err.message);
+    }
       
       return { success: true, firNumber, caseId };
     } catch (error) {
