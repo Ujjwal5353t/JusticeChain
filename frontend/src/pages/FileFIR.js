@@ -220,98 +220,88 @@ const FileFIR = () => {
     }
   };
 const handleSubmit = async () => {
-  const allErrors = [];
-  for (let step = 1; step <= 3; step++) {
-    const stepErrors = validateStep(step);
-    allErrors.push(...stepErrors);
-  }
-
-  if (allErrors.length > 0) {
-    alert('Please fix the following errors before submitting:\n\n' + allErrors.join('\n'));
-    return;
-  }
-
-  setIsSubmitting(true);
-
-  try {
-    // 1️⃣ Upload FIR to Pinata
-    const pinataResponse = await fetch('/api/uploadFIR', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        firData: formData
-      })
-    });
-
-    const pinataResult = await pinataResponse.json();
-
-    if (!pinataResponse.ok || !pinataResult.success) {
-      throw new Error('Failed to upload FIR to IPFS');
+    const allErrors = [];
+    for (let step = 1; step <= 3; step++) {
+        const stepErrors = validateStep(step);
+        allErrors.push(...stepErrors);
     }
 
-    const ipfsHash = pinataResult.ipfsHash;
-
-    // 2️⃣ Save FIR to blockchain
-    const txResponse = await fetch('/api/createFIR', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        title: formData.incidentType || 'Untitled FIR',
-        description: formData.incidentDescription || 'No description',
-        severity: 3, // or set based on incidentType
-        ipfsHash: ipfsHash
-      })
-    });
-
-    const txResult = await txResponse.json();
-
-    if (txResult.success) {
-      alert(`✅ FIR submitted successfully!\nTransaction Hash: ${txResult.txHash}`);
-
-      // Reset form
-      setFormData({
-        fullName: '',
-        fatherName: '',
-        age: '',
-        gender: '',
-        occupation: '',
-        address: '',
-        city: '',
-        state: '',
-        pincode: '',
-        phone: '',
-        email: user?.email || '',
-        idType: '',
-        idNumber: '',
-        incidentType: '',
-        incidentDate: '',
-        incidentTime: '',
-        incidentLocation: '',
-        incidentDescription: '',
-        suspectDetails: '',
-        witnessDetails: '',
-        evidenceDescription: '',
-        previousComplaint: false,
-        previousComplaintDetails: '',
-        preferredLanguage: 'english',
-        mediaFiles: []
-      });
-
-      setCurrentStep(1);
-    } else {
-      throw new Error('Failed to save FIR on blockchain');
+    if (allErrors.length > 0) {
+        alert('Please fix the following errors before submitting:\n\n' + allErrors.join('\n'));
+        return;
     }
-  } catch (err) {
-    console.error(err);
-    alert(`Error submitting FIR: ${err.message}`);
-  } finally {
-    setIsSubmitting(false);
-  }
+
+    setIsSubmitting(true);
+
+    // Prepare FIR data with user info
+    const firDataWithUser = {
+        ...formData,
+        filedByUser: {
+            email: user.email,
+            fullName: user.fullName || user.email,
+            userType: user.userType,
+            loginTime: user.loginTime
+        }
+    };
+
+    try {
+        const pinataResponse = await fetch('http://localhost:5000/api/uploadFIR', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(firDataWithUser)
+        });
+
+        if (!pinataResponse.ok) {
+            throw new Error(`Server Error: ${pinataResponse.status}`);
+        }
+
+        const result = await pinataResponse.json();
+
+        if (result.success) {
+            alert(`✅ FIR submitted successfully! IPFS Hash: ${result.ipfsHash}`);
+
+            // Reset form
+            setFormData({
+                fullName: '',
+                fatherName: '',
+                age: '',
+                gender: '',
+                occupation: '',
+                address: '',
+                city: '',
+                state: '',
+                pincode: '',
+                phone: '',
+                email: user?.email || '',
+                idType: '',
+                idNumber: '',
+                incidentType: '',
+                incidentDate: '',
+                incidentTime: '',
+                incidentLocation: '',
+                incidentDescription: '',
+                suspectDetails: '',
+                witnessDetails: '',
+                evidenceDescription: '',
+                previousComplaint: false,
+                previousComplaintDetails: '',
+                preferredLanguage: 'english',
+                mediaFiles: []
+            });
+            setCurrentStep(1);
+        } else {
+            alert('❌ Error submitting FIR. Please try again.');
+        }
+    } catch (err) {
+        console.error('Submit error:', err);
+        alert(`❌ Error submitting FIR: ${err.message}`);
+    } finally {
+        setIsSubmitting(false);
+    }
 };
+
 
   
     <div className="min-h-screen bg-gray-50 py-12">
