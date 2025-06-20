@@ -1,87 +1,97 @@
-require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
+const bodyParser = require('body-parser');
 const axios = require('axios');
 const { ethers } = require('ethers');
-const fs = require('fs');
 
-// App config
 const app = express();
-app.use(cors());
-app.use(express.json());
+const PORT = 5000;
 
-// Load env
-const {
-    PINATA_API_KEY,
-    PINATA_SECRET_API_KEY,
-    PRIVATE_KEY,
-    RPC_URL,
-    CONTRACT_ADDRESS
-} = process.env;
+// Pinata keys
+const PINATA_API_KEY = '3ed821b090e838b7a70e';
+const PINATA_API_SECRET = '9bec76483141bac69f915be60f7bc5d4374dbe9d7727bcf4d41d3d4eed3a6ae8';
 
-const CONTRACT_ABI = JSON.parse(fs.readFileSync('./JusticeChainABI.json', 'utf8'));
+// Blockchain keys
+const PRIVATE_KEY = 'a3a711b3ce1f86a929dcc4ed6412ba8b9631edeb261309e97d3fcbfcad35a0f5';
+const RPC_URL = 'https://rpc.sepolia.org';
+const CONTRACT_ADDRESS = '0xF23133f1cd75C8AF6dEe73389BbB4C327697B82D';
 
-// ethers.js setup
+// ABI file
+const ABI = require('./JusticeChainABI.json');
+
+// Blockchain setup
 const provider = new ethers.JsonRpcProvider(RPC_URL);
 const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
-const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
+const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, wallet);
 
-// Pinata - Upload JSON to IPFS
-const pinJSONToIPFS = async (jsonData) => {
-    const url = `https://api.pinata.cloud/pinning/pinJSONToIPFS`;
+// MIDDLEWARE
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-    const res = await axios.post(url, jsonData, {
-        headers: {
-            'pinata_api_key': PINATA_API_KEY,
-            'pinata_secret_api_key': PINATA_SECRET_API_KEY
-        }
-    });
-
-    console.log('✅ Pinned to IPFS:', res.data);
-    return res.data.IpfsHash;
-};
-
-// Routes
+// ROUTES
 app.get('/', (req, res) => {
-    res.send('JusticeChain Backend Running 🚀');
+    res.send('JusticeChain backend running ✅');
 });
 
-app.post('/uploadToIPFS', async (req, res) => {
+app.post('/api/uploadFIR', async (req, res) => {
     try {
         const firData = req.body;
 
-        const ipfsHash = await pinJSONToIPFS(firData);
+        console.log('FIR received:', firData);
+
+        // Upload to Pinata
+        const pinataResponse = await axios.post(
+            'https://api.pinata.cloud/pinning/pinJSONToIPFS',
+            {
+                pinataMetadata: {
+                    name: `FIR-${Date.now()}`
+                },
+                pinataContent: firData
+            },
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    pinata_api_key: PINATA_API_KEY,
+                    pinata_secret_api_key: PINATA_API_SECRET
+                }
+            }
+        );
+
+        const ipfsHash = pinataResponse.data.IpfsHash;
+
+        console.log('Uploaded to Pinata:', ipfsHash);
+
+        // Send to Blockchain
+        const tx = await contract.createFIR(
+            firData.incidentType,
+            firData.incidentDescription,
+            5, // example severity
+            ipfsHash
+        );
+
+        console.log('TX sent:', tx.hash);
+
+        await tx.wait();
+
+        console.log('TX confirmed');
 
         res.json({
             success: true,
-            ipfsHash: `https://gateway.pinata.cloud/ipfs/${ipfsHash}`
+            ipfsHash: ipfsHash,
+            txHash: tx.hash
         });
-    } catch (err) {
-        console.error('❌ Error uploading to Pinata:', err);
-        res.status(500).json({ success: false, error: err.message });
+
+    } catch (error) {
+        console.error('Error uploading FIR:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error uploading FIR',
+            error: error.message
+        });
     }
 });
 
-app.post('/createFIR', async (req, res) => {
-    try {
-        const { title, description, severity, ipfsHash } = req.body;
-
-        console.log('▶️ Submitting FIR to blockchain:', { title, severity, ipfsHash });
-
-        const tx = await contract.createFIR(title, description, severity, ipfsHash);
-        await tx.wait();
-
-        console.log('✅ FIR created! Tx hash:', tx.hash);
-
-        res.json({ success: true, txHash: tx.hash });
-    } catch (err) {
-        console.error('❌ Error creating FIR on blockchain:', err);
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-// Start server
-const PORT = process.env.PORT || 3000;
+// START SERVER
 app.listen(PORT, () => {
-    console.log(`🚀 Server running at http://localhost:${PORT}`);
+    console.log(`✅ Backend running at http://localhost:${PORT}`);
 });
+
