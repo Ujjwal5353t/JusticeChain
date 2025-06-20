@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: Transform Justice Chain site's complete UI/UX to make it look more official and like an Indian government FIR filing site. Keep Justice Chain name and original color theme. Add good navbar, footer, backgrounds, elements, icons to make it stunning and interactive. Don't use Hindi language.
+user_problem_statement: "Transform Justice Chain site's complete UI/UX to make it look more official and like an Indian government FIR filing site. Keep Justice Chain name and original color theme. Add good navbar, footer, backgrounds, elements, icons to make it stunning and interactive. Don't use Hindi language." + "Add signup page/option for new users as currently there is only login page."
 
 backend:
   - task: "Basic API structure ready"
@@ -116,6 +116,9 @@ backend:
         - working: true
           agent: "main"
           comment: "Basic FastAPI backend with status endpoints already working"
+        - working: true
+          agent: "testing"
+          comment: "Verified that the FastAPI backend is running correctly. The /api endpoint responds with Hello World, /api/status GET endpoint retrieves status checks, and /api/status POST endpoint creates new status checks. MongoDB connection is working properly and CORS is configured correctly for frontend requests."
 
 frontend:
   - task: "Transform to government-style Justice Chain interface"
@@ -257,10 +260,7 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus:
-    - "Create comprehensive FIR filing system"
-    - "Create FIR status tracking system"
-    - "Netlify deployment configuration"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -341,6 +341,81 @@ test_plan:
           agent: "testing"
           comment: "Verified navbar shows login buttons and all navigation links work properly while maintaining government-style design"
 
+  - task: "Create citizen signup functionality"
+    implemented: true
+    working: true
+    file: "pages/CitizenSignup.js, utils/auth.js, App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Created comprehensive citizen signup page with full form validation, government-style design, and integration with AuthService. Updated AuthService to handle user registration and storage in localStorage. Added routes and linked from login page."
+        - working: true
+          agent: "testing"
+          comment: "Verified that the citizen signup functionality is properly implemented. The signup page is accessible from the login page, and new users can register with their information."
+
+  - task: "Create admin signup functionality"
+    implemented: true
+    working: true
+    file: "pages/AdminSignup.js, utils/auth.js, App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Created comprehensive admin signup page with government email validation, official field requirements, and professional design. Updated AuthService to handle admin registration and linked from admin login page."
+        - working: true
+          agent: "testing"
+          comment: "Verified that the admin signup functionality is properly implemented. The signup page is accessible from the admin login page, and new admin users can register with their information."
+
+  - task: "Enhanced authentication system with signup capability"
+    implemented: true
+    working: true
+    file: "utils/auth.js, pages/CitizenLogin.js, pages/AdminLogin.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Updated AuthService with comprehensive signup methods, user storage management, and enhanced login functionality. Fixed login page links to properly navigate to signup pages. Users can now register and login with their new credentials."
+        - working: true
+          agent: "testing"
+          comment: "Verified that the enhanced authentication system works correctly. The AuthService properly handles user registration and login. The authentication protection for FIR filing functionality works as expected - unauthenticated users are redirected to the login page, and after login, users can access the FIR form. The FIR form displays the authenticated user's information, and the navbar shows appropriate authentication status with logout option."
+
+  - task: "Add media file upload functionality to FIR form"
+    implemented: true
+    working: true
+    file: "pages/FileFIR.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Added comprehensive media file upload functionality to FIR form Step 3. Supports images, videos, and documents with proper validation (max 5MB per file). Files are stored in base64 format in localStorage. Includes drag-and-drop interface, file type validation, size validation, upload progress indicator, and file removal capability."
+        - working: true
+          agent: "testing"
+          comment: "Verified that the media file upload functionality in the FIR form works correctly. Users can upload files with proper validation, and the uploaded files are displayed in the review step."
+
+  - task: "Fix FIR form auto-submission issue"
+    implemented: true
+    working: true
+    file: "pages/FileFIR.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Fixed auto-submission issue by removing form tag wrapper around steps and changing submit button from type='submit' to type='button' with onClick handler. Form now only submits when user explicitly clicks the Submit FIR button on step 4, preventing accidental submissions during navigation."
+        - working: true
+          agent: "testing"
+          comment: "Verified that the FIR form auto-submission issue is fixed. The form only submits when the user explicitly clicks the Submit FIR button on step 4, and navigation between steps works correctly without triggering submission."
+
 agent_communication:
     - agent: "main"
       message: "Starting transformation of Justice Chain to official Indian government FIR filing site design. Have obtained professional images for hero section. Will create navbar, footer, and homepage with government-style design."
@@ -354,3 +429,11 @@ agent_communication:
       message: "Completed testing of the Justice Chain FIR application. The application has a professional government-style design with proper Justice Chain branding. The homepage navigation works correctly with all links accessible. The FIR filing system has a 4-step form process with proper validation. The track status functionality works with the sample FIR number 'FIR2025001234' and displays real case data with timeline view. Resources and Contact pages load correctly with professional styling. The application is responsive and maintains consistent branding throughout."
     - agent: "testing"
       message: "Completed comprehensive testing of the enhanced Justice Chain FIR application. All requested functionality is working properly: 1) FIR Form Validation works correctly, preventing submission with empty required fields and proceeding when valid data is entered. 2) Track Status functionality shows proper case data for FIR2025001234 (not 'ok' text) and maintains display after page refresh. 3) Citizen Login works with demo credentials (user@example.com/password123) and redirects to a dashboard showing user stats, quick actions, and FIR list. 4) Admin Login works with demo credentials (admin@justice.gov.in/admin123) and redirects to admin dashboard with system stats, FIR table, and filtering options. FIR status update functionality works correctly. 5) Navigation is working properly with all links accessible and the government-style design is maintained throughout the application."
+    - agent: "main"
+      message: "SIGNUP FUNCTIONALITY ADDED: Successfully implemented comprehensive signup functionality for both citizens and admins. Created CitizenSignup.js with full form validation, personal information fields, address details, and ID proof collection. Created AdminSignup.js with government email validation, official credentials, and department information. Updated AuthService.js with complete user registration system that stores new users in localStorage alongside demo credentials. Enhanced existing login pages to properly link to signup pages. Added new routes in App.js. Users can now register new accounts and login with their credentials. Both signup pages maintain government-style professional design consistent with the portal."
+    - agent: "main"
+      message: "FIR MEDIA UPLOAD & AUTO-SUBMISSION FIX: Successfully added comprehensive media file upload functionality to the FIR filing form in Step 3. Users can now upload images, videos, and documents (max 5MB each) with drag-and-drop interface, proper validation, and base64 storage. Fixed the critical auto-submission bug by removing the form wrapper and changing submit button behavior - form now only submits when user explicitly clicks Submit FIR button. Enhanced review step to show uploaded files. The FIR system now supports complete evidence documentation with proper file management."
+    - agent: "testing"
+      message: "Completed backend API testing. All tests passed successfully: 1) The FastAPI backend is running correctly on the configured port. 2) The /api endpoint responds with 'Hello World' as expected. 3) The /api/status GET endpoint successfully retrieves status checks from MongoDB. 4) The /api/status POST endpoint correctly creates new status checks in the database. 5) MongoDB connection is working properly, with data being stored and retrieved successfully. 6) CORS is configured correctly to allow frontend requests from any origin. The backend is fully functional and ready to support the frontend application."
+    - agent: "testing"
+      message: "Completed testing of the authentication protection for FIR filing functionality. All tests passed successfully: 1) Unauthenticated access to /file-fir redirects to /citizen-login with a message to login. 2) Login with demo credentials (user@example.com/password123) works correctly. 3) After login, the /file-fir route is accessible and displays the FIR form. 4) The FIR form shows the authenticated user's information, including pre-filled email. 5) The navbar shows appropriate authentication status with logout option. 6) Logout functionality works correctly and redirects to the home page. 7) After logout, attempting to access /file-fir again redirects to the login page. The authentication protection is working as expected, ensuring users must login before they can file an FIR."

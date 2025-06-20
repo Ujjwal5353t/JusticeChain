@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const CitizenLogin = () => {
   const [formData, setFormData] = useState({
@@ -10,6 +10,11 @@ const CitizenLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
+
+  // Get the intended destination from navigation state
+  const from = location.state?.from?.pathname || '/citizen-dashboard';
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -17,7 +22,7 @@ const CitizenLogin = () => {
       ...prev,
       [name]: value
     }));
-    setError('');
+    setError(''); // Clear error when user types
   };
 
   const handleSubmit = async (e) => {
@@ -25,35 +30,30 @@ const CitizenLogin = () => {
     setIsLoading(true);
     setError('');
 
+    // Validate form
     if (!formData.email || !formData.password) {
       setError('Please fill in all fields');
       setIsLoading(false);
       return;
     }
 
-    try {
-      const response = await axios.post('http://localhost:3000/citizen/login', {
-        username: formData.email,
-        password: formData.password
-      });
-
-      if (response.data.token) {
-        alert('Login Successful!');
-        navigate('/citizen-dashboard');
+    // Simulate API call delay
+    setTimeout(async () => {
+      const result = await login(formData.email, formData.password, 'citizen');
+      
+      if (result.success) {
+        navigate(from, { replace: true });
       } else {
-        setError('Invalid email or password');
+        setError(result.error || 'Invalid email or password');
       }
-    } catch (error) {
-      console.error(error);
-      setError('Login failed: ' + (error.response?.data?.message || 'Server error'));
-    } finally {
       setIsLoading(false);
-    }
+    }, 1000);
   };
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
+        {/* Header */}
         <div className="text-center">
           <div className="flex items-center justify-center mb-6">
             <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
@@ -63,10 +63,22 @@ const CitizenLogin = () => {
             </div>
           </div>
           <h2 className="text-3xl font-bold text-gray-900">JusticeChain</h2>
-          <h1 className="mt-2 text-2xl font-semibold text-gray-900">🏛️ Citizen Login</h1>
-          <p className="mt-2 text-sm text-gray-600">Access your account to file and track FIRs</p>
+          <h1 className="mt-2 text-2xl font-semibold text-gray-900">
+            🏛️ Citizen Login
+          </h1>
+          <p className="mt-2 text-sm text-gray-600">
+            Access your account to file and track FIRs
+          </p>
+          {from !== '/citizen-dashboard' && (
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-sm text-blue-700">
+                🔐 Please login to file an FIR
+              </p>
+            </div>
+          )}
         </div>
 
+        {/* Form */}
         <div className="bg-white rounded-xl shadow-lg p-8 border-l-4 border-blue-600">
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Welcome back</h3>
@@ -121,8 +133,8 @@ const CitizenLogin = () => {
               type="submit"
               disabled={isLoading}
               className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white ${
-                isLoading
-                  ? 'bg-gray-400 cursor-not-allowed'
+                isLoading 
+                  ? 'bg-gray-400 cursor-not-allowed' 
                   : 'bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500'
               }`}
             >
@@ -135,7 +147,9 @@ const CitizenLogin = () => {
                   Signing in...
                 </div>
               ) : (
-                <>🔒 Secure Login</>
+                <>
+                  🔒 Secure Login
+                </>
               )}
             </button>
           </form>
@@ -143,7 +157,10 @@ const CitizenLogin = () => {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
-              <button className="text-blue-600 hover:text-blue-500 font-medium">
+              <button 
+                onClick={() => navigate('/citizen-signup')}
+                className="text-blue-600 hover:text-blue-500 font-medium"
+              >
                 Register here
               </button>
             </p>
@@ -162,6 +179,7 @@ const CitizenLogin = () => {
           </div>
         </div>
 
+        {/* Demo Credentials */}
         <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
           <h4 className="text-sm font-medium text-blue-900 mb-2">Demo Credentials</h4>
           <div className="text-xs text-blue-700 space-y-1">

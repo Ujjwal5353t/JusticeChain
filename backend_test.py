@@ -91,6 +91,37 @@ def test_status_get_endpoint(expected_id=None):
         print(f"❌ GET status endpoint test failed: {str(e)}")
         return False
 
+def test_cors_configuration():
+    """Test that CORS is properly configured."""
+    try:
+        # Send an OPTIONS request to simulate a CORS preflight request
+        headers = {
+            'Origin': 'http://example.com',
+            'Access-Control-Request-Method': 'GET',
+            'Access-Control-Request-Headers': 'Content-Type'
+        }
+        response = requests.options(f"{API_BASE_URL}/", headers=headers)
+        
+        if response.status_code == 200:
+            # Check for CORS headers
+            if 'access-control-allow-origin' in response.headers:
+                allow_origin = response.headers['access-control-allow-origin']
+                if allow_origin == '*' or allow_origin == 'http://example.com':
+                    print("✅ CORS configuration test passed")
+                    return True
+                else:
+                    print(f"❌ CORS configuration test failed: Unexpected Access-Control-Allow-Origin: {allow_origin}")
+                    return False
+            else:
+                print("❌ CORS configuration test failed: No Access-Control-Allow-Origin header found")
+                return False
+        else:
+            print(f"❌ CORS configuration test failed: Status code {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ CORS configuration test failed: {str(e)}")
+        return False
+
 def run_all_tests():
     """Run all tests and return overall result."""
     print("\n🔍 Starting backend API tests...\n")
@@ -104,13 +135,17 @@ def run_all_tests():
     # Test GET /status endpoint
     get_result = test_status_get_endpoint(status_id)
     
+    # Test CORS configuration
+    cors_result = test_cors_configuration()
+    
     # Overall result
-    all_passed = root_result and post_result and get_result
+    all_passed = root_result and post_result and get_result and cors_result
     
     print("\n📋 Test Summary:")
     print(f"Root Endpoint: {'✅ Passed' if root_result else '❌ Failed'}")
     print(f"POST Status Endpoint: {'✅ Passed' if post_result else '❌ Failed'}")
     print(f"GET Status Endpoint: {'✅ Passed' if get_result else '❌ Failed'}")
+    print(f"CORS Configuration: {'✅ Passed' if cors_result else '❌ Failed'}")
     print(f"\nOverall Result: {'✅ All tests passed!' if all_passed else '❌ Some tests failed!'}")
     
     return all_passed

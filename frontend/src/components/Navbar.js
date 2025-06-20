@@ -1,43 +1,34 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { AuthService } from '../utils/auth';
+import { useAuth } from '../contexts/AuthContext';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [citizenUser, setCitizenUser] = useState(null);
-  const [adminUser, setAdminUser] = useState(null);
+  const { user, logout } = useAuth();
   const location = useLocation();
 
-  // Check authentication status
-  useEffect(() => {
-    const checkAuth = () => {
-      const citizen = AuthService.isAuthenticated('citizen');
-      const admin = AuthService.isAuthenticated('admin');
-      setCitizenUser(citizen);
-      setAdminUser(admin);
-    };
-
-    checkAuth();
-    // Check auth status on route changes
-    const interval = setInterval(checkAuth, 1000);
-    return () => clearInterval(interval);
-  }, [location]);
-
-  const handleLogout = (userType) => {
-    AuthService.logout(userType);
-    setCitizenUser(null);
-    setAdminUser(null);
+  const handleLogout = () => {
+    const userType = user?.userType || 'citizen';
+    logout(userType);
     window.location.href = '/';
   };
 
   const navItems = [
     { name: 'Home', path: '/', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-    { name: 'File FIR', path: '/file-fir', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+    { name: 'File FIR', path: '/file-fir', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', protected: true, userType: 'citizen' },
     { name: 'Track Status', path: '/status', icon: 'M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
     { name: 'Resources', path: '/resources', icon: 'M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z' },
     { name: 'Current Cases', path: '/current-cases', icon: 'M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2' },
     { name: 'Contact', path: '/contact', icon: 'M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' }
   ];
+
+  // Filter nav items based on authentication status
+  const visibleNavItems = navItems.filter(item => {
+    if (item.protected && item.userType) {
+      return user && user.userType === item.userType;
+    }
+    return true;
+  });
 
   return (
     <>
@@ -82,39 +73,26 @@ const Navbar = () => {
             </div>
             <div className="hidden md:flex items-center space-x-4">
               {/* Authentication Status */}
-              {citizenUser ? (
+              {user ? (
                 <div className="flex items-center space-x-3">
                   <div className="text-right">
-                    <p className="text-sm text-blue-900 font-medium">Logged in as</p>
-                    <p className="text-sm text-gray-600">{citizenUser.email}</p>
+                    <p className="text-sm text-blue-900 font-medium">
+                      {user.userType === 'citizen' ? 'Citizen' : 'Admin Officer'}
+                    </p>
+                    <p className="text-sm text-gray-600">{user.fullName || user.email}</p>
                   </div>
                   <Link
-                    to="/citizen-dashboard"
-                    className="flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-600 transition-colors shadow-md"
+                    to={user.userType === 'citizen' ? '/citizen-dashboard' : '/admin-dashboard'}
+                    className={`flex items-center px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors shadow-md ${
+                      user.userType === 'citizen' 
+                        ? 'bg-blue-700 hover:bg-blue-600' 
+                        : 'bg-green-700 hover:bg-green-600'
+                    }`}
                   >
-                    🏛️ Dashboard
+                    {user.userType === 'citizen' ? '🏛️ Dashboard' : '👨‍💼 Admin Dashboard'}
                   </Link>
                   <button
-                    onClick={() => handleLogout('citizen')}
-                    className="flex items-center px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors shadow-md"
-                  >
-                    Logout
-                  </button>
-                </div>
-              ) : adminUser ? (
-                <div className="flex items-center space-x-3">
-                  <div className="text-right">
-                    <p className="text-sm text-blue-900 font-medium">Admin Officer</p>
-                    <p className="text-sm text-gray-600">{adminUser.email}</p>
-                  </div>
-                  <Link
-                    to="/admin-dashboard"
-                    className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-700 rounded-lg hover:bg-green-600 transition-colors shadow-md"
-                  >
-                    👨‍💼 Admin Dashboard
-                  </Link>
-                  <button
-                    onClick={() => handleLogout('admin')}
+                    onClick={handleLogout}
                     className="flex items-center px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors shadow-md"
                   >
                     Logout
@@ -146,7 +124,7 @@ const Navbar = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-12">
             <div className="hidden md:flex items-center space-x-8">
-              {navItems.map((item) => (
+              {visibleNavItems.map((item) => (
                 <Link
                   key={item.name}
                   to={item.path}
@@ -160,6 +138,11 @@ const Navbar = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
                   </svg>
                   {item.name}
+                  {item.protected && (
+                    <svg className="w-3 h-3 ml-1 text-orange-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2z" clipRule="evenodd" />
+                    </svg>
+                  )}
                 </Link>
               ))}
             </div>
@@ -183,7 +166,7 @@ const Navbar = () => {
         {isMenuOpen && (
           <div className="md:hidden bg-blue-800 border-t border-blue-700">
             <div className="px-2 pt-2 pb-3 space-y-1">
-              {navItems.map((item) => (
+              {visibleNavItems.map((item) => (
                 <Link
                   key={item.name}
                   to={item.path}
@@ -198,46 +181,32 @@ const Navbar = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
                   </svg>
                   {item.name}
+                  {item.protected && (
+                    <svg className="w-4 h-4 ml-2 text-orange-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2z" clipRule="evenodd" />
+                    </svg>
+                  )}
                 </Link>
               ))}
               {/* Mobile Authentication Links */}
               <div className="border-t border-blue-700 pt-2 mt-2">
-                {citizenUser ? (
+                {user ? (
                   <>
                     <Link
-                      to="/citizen-dashboard"
+                      to={user.userType === 'citizen' ? '/citizen-dashboard' : '/admin-dashboard'}
                       onClick={() => setIsMenuOpen(false)}
                       className="flex items-center px-3 py-2 rounded-md text-base font-medium text-white hover:text-orange-200 hover:bg-blue-700"
                     >
-                      🏛️ Dashboard
+                      {user.userType === 'citizen' ? '🏛️ Dashboard' : '👨‍💼 Admin Dashboard'}
                     </Link>
                     <button
                       onClick={() => {
-                        handleLogout('citizen');
+                        handleLogout();
                         setIsMenuOpen(false);
                       }}
                       className="flex items-center px-3 py-2 rounded-md text-base font-medium text-white hover:text-orange-200 hover:bg-blue-700 w-full text-left"
                     >
-                      Logout
-                    </button>
-                  </>
-                ) : adminUser ? (
-                  <>
-                    <Link
-                      to="/admin-dashboard"
-                      onClick={() => setIsMenuOpen(false)}
-                      className="flex items-center px-3 py-2 rounded-md text-base font-medium text-white hover:text-orange-200 hover:bg-blue-700"
-                    >
-                      👨‍💼 Admin Dashboard
-                    </Link>
-                    <button
-                      onClick={() => {
-                        handleLogout('admin');
-                        setIsMenuOpen(false);
-                      }}
-                      className="flex items-center px-3 py-2 rounded-md text-base font-medium text-white hover:text-orange-200 hover:bg-blue-700 w-full text-left"
-                    >
-                      Logout
+                      Logout ({user.fullName || user.email})
                     </button>
                   </>
                 ) : (

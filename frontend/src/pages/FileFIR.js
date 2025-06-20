@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { FIRStorage } from '../utils/firStorage';
 
 const FileFIR = () => {
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    // Personal Information
+    // Personal Information - Pre-filled from logged in user
     fullName: '',
     fatherName: '',
     age: '',
@@ -16,7 +18,7 @@ const FileFIR = () => {
     state: '',
     pincode: '',
     phone: '',
-    email: '',
+    email: user?.email || '',
     idType: '',
     idNumber: '',
     
@@ -33,8 +35,13 @@ const FileFIR = () => {
     // Additional Information
     previousComplaint: false,
     previousComplaintDetails: '',
-    preferredLanguage: 'english'
+    preferredLanguage: 'english',
+    
+    // Media Files
+    mediaFiles: []
   });
+
+  const [uploadingFiles, setUploadingFiles] = useState(false);
 
   const incidentTypes = [
     'Theft/Burglary',
@@ -50,15 +57,13 @@ const FileFIR = () => {
     'Other'
   ];
 
-const states = [
-    'Andaman and Nicobar Islands', 'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar',
-  'Chandigarh', 'Chhattisgarh', 'Dadra and Nagar Haveli and Daman and Diu', 'Delhi', 'Goa',
-  'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Jammu and Kashmir', 'Karnataka',
-  'Kerala', 'Ladakh', 'Lakshadweep', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya',
-  'Mizoram', 'Nagaland', 'Odisha', 'Puducherry', 'Punjab', 'Rajasthan', 'Sikkim',
-  'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal'
+  const states = [
+    'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+    'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
+    'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram',
+    'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
+    'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal'
   ];
-
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -79,6 +84,90 @@ const states = [
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+  };
+
+  // Handle file upload
+  const handleFileUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    setUploadingFiles(true);
+
+    const filePromises = files.map(file => {
+      return new Promise((resolve, reject) => {
+        // Check file size (max 5MB per file)
+        if (file.size > 5 * 1024 * 1024) {
+          alert(`File ${file.name} is too large. Maximum size is 5MB.`);
+          resolve(null);
+          return;
+        }
+
+        // Check file type
+        const allowedTypes = [
+          'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
+          'video/mp4', 'video/avi', 'video/mov', 'video/wmv',
+          'application/pdf', 'application/msword', 
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ];
+
+        if (!allowedTypes.includes(file.type)) {
+          alert(`File ${file.name} has unsupported format. Please upload images, videos, or documents only.`);
+          resolve(null);
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          resolve({
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            data: event.target.result, // This will be base64
+            uploadDate: new Date().toISOString()
+          });
+        };
+        reader.onerror = () => {
+          alert(`Error reading file ${file.name}`);
+          resolve(null);
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    try {
+      const results = await Promise.all(filePromises);
+      const validFiles = results.filter(file => file !== null);
+      
+      setFormData(prev => ({
+        ...prev,
+        mediaFiles: [...prev.mediaFiles, ...validFiles]
+      }));
+      
+      if (validFiles.length > 0) {
+        alert(`Successfully uploaded ${validFiles.length} file(s)`);
+      }
+    } catch (error) {
+      alert('Error uploading files. Please try again.');
+      console.error('File upload error:', error);
+    } finally {
+      setUploadingFiles(false);
+      e.target.value = ''; // Clear the input
+    }
+  };
+
+  // Remove uploaded file
+  const removeFile = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      mediaFiles: prev.mediaFiles.filter((_, i) => i !== index)
+    }));
+  };
+
+  // Format file size for display
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return Math.round(bytes / 1024) + ' KB';
+    return Math.round(bytes / 1048576) + ' MB';
   };
 
   const validateStep = (step) => {
@@ -131,9 +220,7 @@ const states = [
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
+  const handleSubmit = async () => {
     const allErrors = [];
     for (let step = 1; step <= 3; step++) {
       const stepErrors = validateStep(step);
@@ -147,11 +234,22 @@ const states = [
     
     setIsSubmitting(true);
     
-    const result = FIRStorage.saveFIR(formData);
+    // Add user information to FIR data
+    const firDataWithUser = {
+      ...formData,
+      filedByUser: {
+        email: user.email,
+        fullName: user.fullName || user.email,
+        userType: user.userType,
+        loginTime: user.loginTime
+      }
+    };
+    
+    const result = FIRStorage.saveFIR(firDataWithUser);
     
     setTimeout(() => {
       if (result.success) {
-        alert(`FIR submitted successfully! Your FIR Number is: ${result.firNumber}`);
+        alert(`FIR submitted successfully! Your FIR Number is: ${result.firNumber}\n\nThis FIR has been filed by: ${user.fullName || user.email}`);
         setFormData({
           fullName: '',
           fatherName: '',
@@ -163,7 +261,7 @@ const states = [
           state: '',
           pincode: '',
           phone: '',
-          email: '',
+          email: user?.email || '',
           idType: '',
           idNumber: '',
           incidentType: '',
@@ -176,7 +274,8 @@ const states = [
           evidenceDescription: '',
           previousComplaint: false,
           previousComplaintDetails: '',
-          preferredLanguage: 'english'
+          preferredLanguage: 'english',
+          mediaFiles: []
         });
         setCurrentStep(1);
       } else {
@@ -193,6 +292,16 @@ const states = [
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">File FIR Online</h1>
           <p className="text-xl text-gray-600">Secure, Fast, and Transparent</p>
+          
+          {/* User Authentication Status */}
+          <div className="mt-6 inline-flex items-center px-6 py-3 bg-green-50 border border-green-200 rounded-lg">
+            <svg className="w-5 h-5 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <span className="text-green-800 font-medium">
+              Authenticated as: {user?.fullName || user?.email}
+            </span>
+          </div>
         </div>
 
         {/* Step Indicator */}
@@ -216,7 +325,8 @@ const states = [
         </div>
 
         <div className="bg-white rounded-2xl shadow-lg p-8">
-          <form onSubmit={handleSubmit}>
+          {/* Form content without form tag around steps to prevent auto-submission */}
+          <div>
             {/* Step 1: Personal Information */}
             {currentStep === 1 && (
               <div className="space-y-6">
@@ -300,14 +410,15 @@ const states = [
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address (Pre-filled from login)</label>
                     <input
                       type="email"
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
                       placeholder="Enter email address"
+                      readOnly
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -503,6 +614,98 @@ const states = [
                       placeholder="Describe any evidence available - photos, videos, documents, physical evidence, etc."
                     ></textarea>
                   </div>
+
+                  {/* Media Upload Section */}
+                  <div className="bg-gray-50 rounded-lg p-6 border-2 border-dashed border-gray-300">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">📎 Upload Evidence Files</h4>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Upload photos, videos, or documents related to the incident. Supported formats: JPG, PNG, GIF, MP4, AVI, PDF, DOC, DOCX (Max 5MB per file)
+                    </p>
+                    
+                    <div className="flex items-center justify-center w-full">
+                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-blue-300 border-dashed rounded-lg cursor-pointer bg-blue-50 hover:bg-blue-100 transition-colors">
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <svg className="w-8 h-8 mb-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                          <p className="mb-2 text-sm text-blue-700">
+                            <span className="font-semibold">Click to upload</span> or drag and drop
+                          </p>
+                          <p className="text-xs text-blue-500">Images, Videos, Documents (MAX 5MB each)</p>
+                        </div>
+                        <input 
+                          type="file" 
+                          className="hidden" 
+                          multiple 
+                          accept="image/*,video/*,.pdf,.doc,.docx"
+                          onChange={handleFileUpload}
+                          disabled={uploadingFiles}
+                        />
+                      </label>
+                    </div>
+
+                    {uploadingFiles && (
+                      <div className="mt-4 flex items-center justify-center">
+                        <svg className="animate-spin h-5 w-5 text-blue-500 mr-2" fill="none" viewBox="0 0 24 24">
+                          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25"></circle>
+                          <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" className="opacity-75"></path>
+                        </svg>
+                        <span className="text-blue-600">Uploading files...</span>
+                      </div>
+                    )}
+
+                    {/* Display uploaded files */}
+                    {formData.mediaFiles.length > 0 && (
+                      <div className="mt-6">
+                        <h5 className="font-semibold text-gray-900 mb-3">Uploaded Files ({formData.mediaFiles.length})</h5>
+                        <div className="space-y-2">
+                          {formData.mediaFiles.map((file, index) => (
+                            <div key={index} className="flex items-center justify-between bg-white p-3 rounded-lg border">
+                              <div className="flex items-center">
+                                <div className="flex-shrink-0 mr-3">
+                                  {file.type.startsWith('image/') && (
+                                    <svg className="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                                    </svg>
+                                  )}
+                                  {file.type.startsWith('video/') && (
+                                    <svg className="w-6 h-6 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                                      <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+                                    </svg>
+                                  )}
+                                  {file.type.includes('pdf') && (
+                                    <svg className="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                                    </svg>
+                                  )}
+                                  {(file.type.includes('doc') || file.type.includes('word')) && (
+                                    <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                                    </svg>
+                                  )}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                                  <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeFile(index)}
+                                className="text-red-500 hover:text-red-700 p-1"
+                                title="Remove file"
+                              >
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex items-center">
                     <input
                       type="checkbox"
@@ -536,6 +739,15 @@ const states = [
             {currentStep === 4 && (
               <div className="space-y-6">
                 <h3 className="text-2xl font-bold text-gray-900 mb-6">Review Your FIR</h3>
+                
+                {/* User Authentication Info */}
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-green-900 mb-2">Filed by Authenticated User</h4>
+                  <p className="text-sm text-green-700">Email: {user?.email}</p>
+                  <p className="text-sm text-green-700">Name: {user?.fullName || 'Not provided'}</p>
+                  <p className="text-sm text-green-700">User Type: {user?.userType}</p>
+                </div>
+                
                 <div className="bg-gray-50 rounded-lg p-6 space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -549,12 +761,67 @@ const states = [
                       <h4 className="font-semibold text-gray-900">Incident Information</h4>
                       <p className="text-sm text-gray-600">Type: {formData.incidentType}</p>
                       <p className="text-sm text-gray-600">Date: {formData.incidentDate}</p>
+                      {formData.incidentTime && (
+                        <p className="text-sm text-gray-600">Time: {formData.incidentTime}</p>
+                      )}
                     </div>
                   </div>
                   <div>
                     <h4 className="font-semibold text-gray-900">Incident Description</h4>
                     <p className="text-sm text-gray-600">{formData.incidentDescription}</p>
                   </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900">Location</h4>
+                    <p className="text-sm text-gray-600">{formData.incidentLocation}</p>
+                  </div>
+
+                  {/* Show uploaded files */}
+                  {formData.mediaFiles.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">Attached Evidence Files</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {formData.mediaFiles.map((file, index) => (
+                          <div key={index} className="flex items-center bg-white p-2 rounded border">
+                            <div className="flex-shrink-0 mr-2">
+                              {file.type.startsWith('image/') && (
+                                <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                              {file.type.startsWith('video/') && (
+                                <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                                  <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+                                </svg>
+                              )}
+                              {(file.type.includes('pdf') || file.type.includes('doc')) && (
+                                <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-medium text-gray-900 truncate">{file.name}</p>
+                              <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {formData.suspectDetails && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900">Suspect Details</h4>
+                      <p className="text-sm text-gray-600">{formData.suspectDetails}</p>
+                    </div>
+                  )}
+
+                  {formData.witnessDetails && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900">Witness Details</h4>
+                      <p className="text-sm text-gray-600">{formData.witnessDetails}</p>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -567,6 +834,21 @@ const states = [
                       <p className="text-sm text-blue-700 mt-1">
                         By submitting this FIR, you confirm that all information provided is true and accurate to the best of your knowledge. 
                         False information in an FIR is a punishable offense under Indian law.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <svg className="h-5 w-5 text-green-600 mt-0.5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <div>
+                      <h4 className="text-sm font-medium text-green-900">Ready to Submit</h4>
+                      <p className="text-sm text-green-700 mt-1">
+                        Please review all information carefully. Click the "Submit FIR" button below to file your complaint.
+                        You will receive a unique FIR number for tracking purposes.
                       </p>
                     </div>
                   </div>
@@ -605,7 +887,8 @@ const states = [
                 </button>
               ) : (
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={handleSubmit}
                   disabled={isSubmitting}
                   className={`flex items-center px-8 py-3 rounded-lg font-medium transition-all duration-200 ${
                     isSubmitting
@@ -632,7 +915,7 @@ const states = [
                 </button>
               )}
             </div>
-          </form>
+          </div>
         </div>
 
         {/* Help Section */}
