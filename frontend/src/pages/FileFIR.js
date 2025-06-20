@@ -327,9 +327,7 @@ const FileFIR = () => {
     }
 };
 
-    
-    const result = FIRStorage.saveFIR(firDataWithUser);
-    
+        
     setTimeout(() => {
       if (result.success) {
         alert(`FIR submitted successfully! Your FIR Number is: ${result.firNumber}\n\nThis FIR has been filed by: ${user.fullName || user.email}`);
