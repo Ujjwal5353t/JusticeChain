@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AuthService } from '../utils/auth';
+import axios from 'axios';
 
 const AdminLogin = () => {
   const [formData, setFormData] = useState({
@@ -17,7 +17,7 @@ const AdminLogin = () => {
       ...prev,
       [name]: value
     }));
-    setError(''); // Clear error when user types
+    setError('');
   };
 
   const handleSubmit = async (e) => {
@@ -25,30 +25,35 @@ const AdminLogin = () => {
     setIsLoading(true);
     setError('');
 
-    // Validate form
     if (!formData.email || !formData.password) {
       setError('Please fill in all fields');
       setIsLoading(false);
       return;
     }
 
-    // Simulate API call delay
-    setTimeout(() => {
-      const result = AuthService.loginAdmin(formData.email, formData.password);
-      
-      if (result.success) {
+    try {
+      const response = await axios.post('http://localhost:3000/admin/login', {
+        username: formData.email,
+        password: formData.password
+      });
+
+      if (response.data.token) {
+        alert('Login Successful!');
         navigate('/admin-dashboard');
       } else {
         setError('Invalid email or password');
       }
+    } catch (error) {
+      console.error(error);
+      setError('Login failed: ' + (error.response?.data?.message || 'Server error'));
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
-        {/* Header */}
         <div className="text-center">
           <div className="flex items-center justify-center mb-6">
             <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
@@ -58,15 +63,10 @@ const AdminLogin = () => {
             </div>
           </div>
           <h2 className="text-3xl font-bold text-gray-900">JusticeChain</h2>
-          <h1 className="mt-2 text-2xl font-semibold text-gray-900">
-            👨‍💼 Admin Login
-          </h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Access your account to file and track FIRs
-          </p>
+          <h1 className="mt-2 text-2xl font-semibold text-gray-900">👨‍💼 Admin Login</h1>
+          <p className="mt-2 text-sm text-gray-600">Access your account to file and track FIRs</p>
         </div>
 
-        {/* Form */}
         <div className="bg-white rounded-xl shadow-lg p-8 border-l-4 border-green-600">
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Administrative Access</h3>
@@ -121,8 +121,8 @@ const AdminLogin = () => {
               type="submit"
               disabled={isLoading}
               className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white ${
-                isLoading 
-                  ? 'bg-gray-400 cursor-not-allowed' 
+                isLoading
+                  ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500'
               }`}
             >
@@ -135,9 +135,7 @@ const AdminLogin = () => {
                   Signing in...
                 </div>
               ) : (
-                <>
-                  🔒 Secure Login
-                </>
+                <>🔒 Secure Login</>
               )}
             </button>
           </form>
@@ -164,7 +162,6 @@ const AdminLogin = () => {
           </div>
         </div>
 
-        {/* Demo Credentials */}
         <div className="bg-green-50 rounded-lg p-4 border border-green-200">
           <h4 className="text-sm font-medium text-green-900 mb-2">Demo Credentials</h4>
           <div className="text-xs text-green-700 space-y-1">
